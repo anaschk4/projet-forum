@@ -43,54 +43,48 @@ func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Vérification des droits
-	if !isPostOwner(username, postId) {
+	var count int
+	err = database.QueryRow("SELECT COUNT(*) FROM posts WHERE id = ? AND username = ?", postId, username).Scan(&count)
+	if err != nil || count == 0 {
 		http.Error(w, "Vous n'avez pas l'autorisation de supprimer ce post", http.StatusUnauthorized)
 		return
 	}
 
-	// Suppression du post
-	if !deletePost(postId) {
-		http.Error(w, "Erreur lors de la suppression", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusFound)
-}
-
-// isPostOwner vérifie si l'utilisateur est le propriétaire du post
-func isPostOwner(username string, postId int) bool {
-	var count int
-	err := database.QueryRow("SELECT COUNT(*) FROM posts WHERE id = ? AND username = ?", postId, username).Scan(&count)
-	return err == nil && count > 0
-}
-
-// deletePost supprime un post et ses éléments associés
-func deletePost(postId int) bool {
+	// Suppression du post avec transaction
 	tx, err := database.Begin()
 	if err != nil {
-		return false
+		http.Error(w, "Erreur interne du serveur", http.StatusInternalServerError)
+		return
 	}
 	
 	// Suppression des votes
 	_, err = tx.Exec("DELETE FROM votes WHERE post_id = ?", postId)
 	if err != nil {
 		tx.Rollback()
-		return false
+		http.Error(w, "Erreur lors de la suppression", http.StatusInternalServerError)
+		return
 	}
 	
 	// Suppression des commentaires
 	_, err = tx.Exec("DELETE FROM comments WHERE post_id = ?", postId)
 	if err != nil {
 		tx.Rollback()
-		return false
+		http.Error(w, "Erreur lors de la suppression", http.StatusInternalServerError)
+		return
 	}
 	
 	// Suppression du post
 	_, err = tx.Exec("DELETE FROM posts WHERE id = ?", postId)
 	if err != nil {
 		tx.Rollback()
-		return false
+		http.Error(w, "Erreur lors de la suppression", http.StatusInternalServerError)
+		return
 	}
 	
-	return tx.Commit() == nil
+	if err = tx.Commit(); err != nil {
+		http.Error(w, "Erreur lors de la suppression", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
