@@ -115,65 +115,125 @@ func CommentsApi(w http.ResponseWriter, r *http.Request) {
 }
 
 // VoteApi permet de voter sur un post
-// VoteApi api to vote on a post
-// VoteApi api to vote on a post
 func VoteApi(w http.ResponseWriter, r *http.Request) {
-    if r.Method == "POST" {
-        if !isLoggedIn(r) {
-            w.WriteHeader(http.StatusUnauthorized)
-            return
-        }
-        if err := r.ParseForm(); err != nil {
-            fmt.Fprintf(w, "ParseForm() err: %v", err)
-            return
-        }
-        cookie, _ := r.Cookie("SESSION")
-        username := databaseAPI.GetUser(database, cookie.Value)
-        postId := r.FormValue("postId")
-        postIdInt, _ := strconv.Atoi(postId)
-        vote := r.FormValue("vote")
-        voteInt, _ := strconv.Atoi(vote)
-        now := time.Now().Format("2006-01-02 15:04:05")
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
-        if voteInt == 1 {
-            if databaseAPI.HasUpvoted(database, username, postIdInt) {
-                databaseAPI.RemoveVote(database, postIdInt, username)
-                databaseAPI.DecreaseUpvotes(database, postIdInt)
-                fmt.Println("Removed upvote from " + username + " on post " + postId + " at " + now)
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte("Vote removed"))
-            } else {
-                databaseAPI.IncreaseUpvotes(database, postIdInt)
-                databaseAPI.AddVote(database, postIdInt, username, 1)
-                fmt.Println(username + " upvoted" + " on post " + postId + " at " + now)
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte("Upvote added"))
-            }
-        } else if voteInt == -1 {
-            if databaseAPI.HasDownvoted(database, username, postIdInt) {
-                databaseAPI.RemoveVote(database, postIdInt, username)
-                databaseAPI.DecreaseDownvotes(database, postIdInt)
-                fmt.Println("Removed downvote from " + username + " on post " + postId + " at " + now)
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte("Vote removed"))
-            } else {
-                databaseAPI.IncreaseDownvotes(database, postIdInt)
-                databaseAPI.AddVote(database, postIdInt, username, -1)
-                fmt.Println(username + " downvoted" + " on post " + postId + " at " + now)
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte("Downvote added"))
-            }
-        } else {
-            w.WriteHeader(http.StatusBadRequest)
-            w.Write([]byte("Invalid vote"))
-            return
-        }
+	if !isLoggedIn(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "ParseForm() err: %v", err)
+		return
+	}
+	cookie, _ := r.Cookie("SESSION")
+	username := databaseAPI.GetUser(database, cookie.Value)
+	postId := r.FormValue("postId")
+	postIdInt, _ := strconv.Atoi(postId)
+	vote := r.FormValue("vote")
+	voteInt, _ := strconv.Atoi(vote)
+	now := time.Now().Format("2006-01-02 15:04:05")
 
-        // Rediriger vers la page du post après avoir voté
-        http.Redirect(w, r, "/post?id="+strconv.Itoa(postIdInt), http.StatusFound)
+	if voteInt == 1 {
+		if databaseAPI.HasUpvoted(database, username, postIdInt) {
+			databaseAPI.RemoveVote(database, postIdInt, username)
+			databaseAPI.DecreaseUpvotes(database, postIdInt)
+			fmt.Println("Removed upvote from " + username + " on post " + postId + " at " + now)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Vote removed"))
+		} else {
+			if databaseAPI.HasDownvoted(database, username, postIdInt) {
+				databaseAPI.RemoveVote(database, postIdInt, username)
+				databaseAPI.DecreaseDownvotes(database, postIdInt)
+			}
+			databaseAPI.IncreaseUpvotes(database, postIdInt)
+			databaseAPI.AddVote(database, postIdInt, username, 1)
+			fmt.Println(username + " upvoted" + " on post " + postId + " at " + now)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Upvote added"))
+		}
+	} else if voteInt == -1 {
+		if databaseAPI.HasDownvoted(database, username, postIdInt) {
+			databaseAPI.RemoveVote(database, postIdInt, username)
+			databaseAPI.DecreaseDownvotes(database, postIdInt)
+			fmt.Println("Removed downvote from " + username + " on post " + postId + " at " + now)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Vote removed"))
+		} else {
+			if databaseAPI.HasUpvoted(database, username, postIdInt) {
+				databaseAPI.RemoveVote(database, postIdInt, username)
+				databaseAPI.DecreaseUpvotes(database, postIdInt)
+			}
+			databaseAPI.IncreaseDownvotes(database, postIdInt)
+			databaseAPI.AddVote(database, postIdInt, username, -1)
+			fmt.Println(username + " downvoted" + " on post " + postId + " at " + now)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Downvote added"))
+		}
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid vote"))
+		return
+	}
+
+	// Rediriger vers la page du post après avoir voté
+	http.Redirect(w, r, "/post?id="+strconv.Itoa(postIdInt), http.StatusFound)
+	return
+}
+
+// DeletePostHandler gère la suppression d'un post
+func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
         return
     }
 
-    w.WriteHeader(http.StatusMethodNotAllowed)
-    return
+    // Vérifier si l'utilisateur est connecté
+    if !isLoggedIn(r) {
+        http.Redirect(w, r, "/login", http.StatusFound)
+        return
+    }
+
+    // Analyser le formulaire
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, fmt.Sprintf("Erreur de ParseForm(): %v", err), http.StatusBadRequest)
+        return
+    }
+
+    // Récupérer le cookie de session
+    cookie, err := r.Cookie("SESSION")
+    if err != nil {
+        http.Error(w, "Erreur de cookie SESSION", http.StatusUnauthorized)
+        return
+    }
+
+    // Récupérer les données du formulaire
+    username := databaseAPI.GetUser(database, cookie.Value)
+    postIdStr := r.FormValue("postId")
+
+    // Convertir postId en entier
+    postId, err := strconv.Atoi(postIdStr)
+    if err != nil {
+        http.Error(w, "ID de post invalide", http.StatusBadRequest)
+        return
+    }
+
+    // Vérifier si l'utilisateur est le propriétaire du post
+    if !databaseAPI.IsPostOwner(database, username, postId) {
+        http.Error(w, "Non autorisé - Vous n'êtes pas le propriétaire de ce post", http.StatusUnauthorized)
+        return
+    }
+
+    // Supprimer le post
+    success := databaseAPI.DeletePost(database, postId)
+    if !success {
+        http.Error(w, "Erreur lors de la suppression du post", http.StatusInternalServerError)
+        return
+    }
+
+    // Rediriger vers la page d'accueil
+    http.Redirect(w, r, "/", http.StatusFound)
 }
