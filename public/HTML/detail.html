@@ -3,137 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forum</title>
-    <link rel="stylesheet" href="public/CSS/style.css">
-    <link rel="stylesheet" href="public/CSS/detailcss.css">
+    <title>Forum - Post Detail</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
+        :root {
+            --background-dark: #121212;
+            --background-light-dark: #1E1E1E;
+            --text-primary: #ffffff;
+            --text-secondary: #B0B0B0;
+            --accent-color: #FF6B00;
+            --accent-hover: #FF8C00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: var(--background-light-dark);
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-right a {
+            color: var(--text-primary);
+            text-decoration: none;
+            margin-left: 15px;
+            transition: color 0.3s ease;
+        }
+
+        .header-right a:hover {
+            color: var(--accent-color);
+        }
+
+        .post-header h1 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+
         .user-info {
             display: flex;
             align-items: center;
             margin-bottom: 15px;
+            color: var(--text-secondary);
         }
+
         .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             margin-right: 10px;
         }
+
         .post-content {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: var(--background-light-dark);
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
+
         .vote-buttons {
             display: flex;
             align-items: center;
             margin: 15px 0;
         }
+
         .vote-btn {
             background: none;
             border: none;
-            color: #fff;
+            color: var(--accent-color);
             font-size: 20px;
             cursor: pointer;
             padding: 5px 10px;
             border-radius: 4px;
             margin-right: 5px;
-            transition: background-color 0.2s;
+            transition: background-color 0.3s ease;
         }
+
         .vote-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 107, 0, 0.1);
         }
+
         .vote-count {
+            color: var(--text-secondary);
             margin: 0 10px;
             font-weight: bold;
         }
+
         .action-buttons {
-            margin: 20px 0;
             display: flex;
             gap: 10px;
+            margin-bottom: 20px;
         }
-        .delete-btn {
-            background-color: #e74c3c;
-            color: white;
+
+        .delete-btn, .comment-btn {
+            background-color: var(--accent-color);
+            color: var(--background-dark);
             border: none;
-            padding: 8px 15px;
+            padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s ease;
         }
-        .delete-btn:hover {
-            background-color: #c0392b;
+
+        .delete-btn:hover, .comment-btn:hover {
+            background-color: var(--accent-hover);
         }
-        .comment-btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.3s;
-        }
-        .comment-btn:hover {
-            background-color: #2980b9;
-        }
+
         .comments-section {
-            margin-top: 30px;
+            background-color: var(--background-light-dark);
+            padding: 20px;
+            border-radius: 8px;
         }
+
         .comment-item {
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: var(--background-dark);
             padding: 15px;
+            margin-bottom: 10px;
             border-radius: 6px;
-            margin-bottom: 15px;
         }
+
         .comment-form textarea {
             width: 100%;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
+            background-color: var(--background-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--accent-color);
             padding: 10px;
             border-radius: 4px;
             min-height: 100px;
             margin-bottom: 10px;
         }
+
         .submit-comment {
-            background-color: #2ecc71;
-            color: white;
+            background-color: var(--accent-color);
+            color: var(--background-dark);
             border: none;
-            padding: 8px 15px;
+            padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s ease;
         }
+
         .submit-comment:hover {
-            background-color: #27ae60;
+            background-color: var(--accent-hover);
         }
     </style>
 </head>
 <body>
-    <header>
+    <header class="header">
         {{if .User.IsLoggedIn}}
-        <div class="header">
-            <a href="/" class="logo"><i class="fas fa-comments"></i> Forum</a>
-            <div class="header-right">
-                <a class="active" href="/">Home</a>
-                <a href="/filter?by=liked">Liked Posts</a>
-                <a href="/filter?by=myposts">My Posts</a>
-                <a href="/newpost">New post</a>
-                <a href="/api/logout">Log out</a>
-            </div>
+        <a href="/" class="logo"><i class="fas fa-comments"></i> Forum</a>
+        <div class="header-right">
+            <a href="/">Home</a>
+            <a href="/filter?by=liked">Liked Posts</a>
+            <a href="/filter?by=myposts">My Posts</a>
+            <a href="/newpost">New post</a>
+            <a href="/api/logout">Log out</a>
         </div>
         {{else}}
-        <div class="header">
-            <a href="/" class="logo"><i class="fas fa-comments"></i> Forum</a>
-            <div class="header-right">
-                <a class="active" href="/">Home</a>
-                <a href="/login">Login</a>
-                <a href="/register">Register</a>
-            </div>
+        <a href="/" class="logo"><i class="fas fa-comments"></i> Forum</a>
+        <div class="header-right">
+            <a href="/">Home</a>
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
         </div>
         {{end}}
     </header>
@@ -143,80 +196,75 @@
             <h1>{{.Post.Title}}</h1>
         </div>
 
-        <div class="post-container">
-            <div class="user-info">
-                <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="User Avatar" class="user-avatar">
-                <span class="username">{{.Post.Username}}</span>
-                <span class="post-date">{{.Post.CreatedAt}}</span>
-            </div>
-            
-            <div class="post-content">
-                <p>{{.Post.Content}}</p>
-            </div>
-            
-            <div class="vote-buttons">
-                <form action="/api/vote" method="POST" style="display: inline-block;">
-                    <input type="hidden" name="postId" value="{{.Post.Id}}">
-                    <input type="hidden" name="vote" value="1">
-                    <button type="submit" class="vote-btn">
-                        <i class="fas fa-thumbs-up"></i>
-                    </button>
-                </form>
-                <span class="vote-count">{{.Post.UpVotes}}</span>
-                
-                <form action="/api/vote" method="POST" style="display: inline-block;">
-                    <input type="hidden" name="postId" value="{{.Post.Id}}">
-                    <input type="hidden" name="vote" value="-1">
-                    <button type="submit" class="vote-btn">
-                        <i class="fas fa-thumbs-down"></i>
-                    </button>
-                </form>
-                <span class="vote-count">{{.Post.DownVotes}}</span>
-            </div>
-            
-            <div class="action-buttons">
-                {{if .User.IsLoggedIn}}
-                <button onclick="document.getElementById('comment-form').style.display='block'" class="comment-btn">
-                    <i class="fas fa-comment"></i> Add Comment
+        <div class="user-info">
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="User Avatar" class="user-avatar">
+            <span>{{.Post.Username}} | {{.Post.CreatedAt}}</span>
+        </div>
+        
+        <div class="post-content">
+            <p>{{.Post.Content}}</p>
+        </div>
+        
+        <div class="vote-buttons">
+            <form action="/api/vote" method="POST" style="display: inline-block;">
+                <input type="hidden" name="postId" value="{{.Post.Id}}">
+                <input type="hidden" name="vote" value="1">
+                <button type="submit" class="vote-btn">
+                    <i class="fas fa-thumbs-up"></i>
                 </button>
-                {{end}}
-                
-                {{if and .User.IsLoggedIn (eq .User.Username .Post.Username)}}
-                <form action="/api/deletepost" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce post?');" style="display: inline;">
-                    <input type="hidden" name="postId" value="{{.Post.Id}}">
-                    <button type="submit" class="delete-btn">
-                        <i class="fas fa-trash"></i> Delete Post
-                    </button>
-                </form>
-                {{end}}
-            </div>
+            </form>
+            <span class="vote-count">{{.Post.UpVotes}}</span>
             
-            <div id="comment-form" class="comment-form" style="display: none;">
-                <form action="/api/comments" method="post">
-                    <input name="postId" value="{{.Post.Id}}" type="hidden">
-                    <textarea name="content" placeholder="Write your comment here..."></textarea>
-                    <button type="submit" class="submit-comment">Post Comment</button>
-                </form>
-            </div>
+            <form action="/api/vote" method="POST" style="display: inline-block;">
+                <input type="hidden" name="postId" value="{{.Post.Id}}">
+                <input type="hidden" name="vote" value="-1">
+                <button type="submit" class="vote-btn">
+                    <i class="fas fa-thumbs-down"></i>
+                </button>
+            </form>
+            <span class="vote-count">{{.Post.DownVotes}}</span>
+        </div>
+        
+        <div class="action-buttons">
+            {{if .User.IsLoggedIn}}
+            <button onclick="document.getElementById('comment-form').style.display='block'" class="comment-btn">
+                <i class="fas fa-comment"></i> Add Comment
+            </button>
+            {{end}}
             
-            <div class="comments-section">
-                <h3>Comments ({{len .Post.Comments}})</h3>
-                
-                {{if .Post.Comments}}
-                    {{range .Post.Comments}}
-                    <div class="comment-item">
-                        <div class="user-info">
-                            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="User Avatar" class="user-avatar" style="width: 30px; height: 30px;">
-                            <span class="username">{{.Username}}</span>
-                            <span class="post-date">{{.CreatedAt}}</span>
-                        </div>
-                        <p>{{.Content}}</p>
+            {{if and .User.IsLoggedIn (eq .User.Username .Post.Username)}}
+            <form action="/api/deletepost" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce post?');">
+                <button type="submit" class="delete-btn">
+                    <i class="fas fa-trash"></i> Delete Post
+                </button>
+            </form>
+            {{end}}
+        </div>
+        
+        <div id="comment-form" class="comment-form" style="display: none;">
+            <form action="/api/comments" method="post">
+                <input name="postId" value="{{.Post.Id}}" type="hidden">
+                <textarea name="content" placeholder="Write your comment here..."></textarea>
+                <button type="submit" class="submit-comment">Post Comment</button>
+            </form>
+        </div>
+        
+        <div class="comments-section">
+            <h3>Comments ({{len .Post.Comments}})</h3>
+            
+            {{if .Post.Comments}}
+                {{range .Post.Comments}}
+                <div class="comment-item">
+                    <div class="user-info">
+                        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="User Avatar" class="user-avatar" style="width: 30px; height: 30px;">
+                        <span>{{.Username}} | {{.CreatedAt}}</span>
                     </div>
-                    {{end}}
-                {{else}}
-                <p>No comments yet. Be the first to comment!</p>
+                    <p>{{.Content}}</p>
+                </div>
                 {{end}}
-            </div>
+            {{else}}
+            <p>No comments yet. Be the first to comment!</p>
+            {{end}}
         </div>
     </div>
 </body>
