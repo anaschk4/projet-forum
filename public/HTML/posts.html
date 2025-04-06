@@ -1,76 +1,130 @@
 {{ define "LoggedHeader" }}
 <div class="header">
-    <a href="/" class="logo"><i class=" fa fa-solid fa-comments"></i>Forum</a>
-    <div class="header-right">
-        <a class="active" href="/">Home</a>
-        <a href="/filter?by=liked">Liked Posts</a>
-        <a href="/filter?by=myposts">My Posts</a>
-        <a href="/newpost">New post</a>
-        <a href="/api/logout">Log out</a>
-    </div>
+<a href="/" class="logo"><i class=" fa fa-solid fa-comments"></i>Forum</a>
+<div class="header-right">
+<a class="active" href="/">Home</a>
+<a href="/filter?by=liked">Liked Posts</a>
+<a href="/filter?by=myposts">My Posts</a>
+<a href="/newpost">New post</a>
+<a href="/api/logout">Log out</a>
+</div>
 </div>
 {{ end }}
-
 {{ define "DefaultHeader" }}
 <div class="header">
-    <a href="/" class="logo"><i class=" fa fa-solid fa-comments"></i>Forum</a>
-    <div class="header-right">
-        <a class="active" href="/">Accueil</a>
-        <a href="/login">Connexion</a>
-        <a href="/register">Inscription</a>
-    </div>
+<a href="/" class="logo"><i class=" fa fa-solid fa-comments"></i>Forum</a>
+<div class="header-right">
+<a class="active" href="/">Accueil</a>
+<a href="/login">Connexion</a>
+<a href="/register">Inscription</a>
+</div>
 </div>
 {{ end }}
-
 {{ $icon := .Icon }}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forum</title>
-    <link rel="stylesheet" href="public/CSS/post.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital@1&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forum</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital@1&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Titillium Web', sans-serif;
+        background-color: #121212;
+        color: white;
+        margin: 0;
+        padding: 0;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .navigate {
+        background-color: rgba(255,255,255,0.1);
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+    .navigate a {
+        color: #FF6B00;
+        text-decoration: none;
+    }
+    .posts-table {
+        width: 100%;
+    }
+    .table-head {
+        display: flex;
+        background-color: rgba(255,255,255,0.1);
+        color: #B0B0B0;
+        padding: 10px;
+        text-transform: uppercase;
+    }
+    .table-head div {
+        flex: 1;
+    }
+    .table-row {
+        display: flex;
+        background-color: rgba(255,255,255,0.05);
+        margin-bottom: 10px;
+        padding: 15px;
+        align-items: center;
+    }
+    .status {
+        flex: 0 0 50px;
+        color: #FF6B00;
+    }
+    .subjects {
+        flex: 3;
+    }
+    .subjects a {
+        color: white;
+        text-decoration: none;
+    }
+    .subjects a:hover {
+        color: #FF6B00;
+    }
+    .last-reply {
+        flex: 1;
+        text-align: right;
+        color: #B0B0B0;
+    }
+</style>
 </head>
-
 <body>
 <header>
-    {{ if .User.IsLoggedIn }}
-    {{ template "LoggedHeader" . }}
-    {{ else }}
-    {{ template "DefaultHeader" . }}
-    {{ end }}
+ {{ if .User.IsLoggedIn }}
+ {{ template "LoggedHeader" . }}
+ {{ else }}
+ {{ template "DefaultHeader" . }}
+ {{ end }}
 </header>
 <div class="container">
-    <!--Navigation-->
-    <div class="navigate">
-        <span><a href="/">Forum</a> >> <a href="">{{ .Title }}</a></span>
-    </div>
-    <!--Display posts table-->
-    <div class="posts-table">
-        <div class="table-head">
-            <div class="status">Filter</div>
-            <div class="subjects">Title</div>
-            <div class="last-reply">Created</div>
-        </div>
-        {{ range .Posts }}
-        <div class="table-row">
-            <div class="status"><i class="fa {{ $icon }}"></i></div>
-            <div class="subjects">
-                <a href="/post?id={{ .Id }}">{{ .Title }}</a>
-                <br>
-                <span>Started by <b><a>{{ .Username }}</a></b> .</span>
-            </div>
-            <div class="last-reply">
-                {{ .CreatedAt }}
-                <br>By <b><a>{{ .Username }}</a></b>
-            </div>
-        </div>
-        {{ end }}
-    </div>
+<div class="navigate">
+<span><a href="/">Forum</a> >> <a href="">{{ .Title }}</a></span>
+</div>
+<div class="posts-table">
+<div class="table-head">
+<div class="status">Filter</div>
+<div class="subjects">Title</div>
+<div class="last-reply">Created</div>
+</div>
+ {{ range .Posts }}
+<div class="table-row">
+<div class="status"><i class="fa {{ $icon }}"></i></div>
+<div class="subjects">
+<a href="/post?id={{ .Id }}">{{ .Title }}</a>
+<br>
+<span>Started by <b><a>{{ .Username }}</a></b> .</span>
+</div>
+<div class="last-reply">
+ {{ .CreatedAt }}
+<br>By <b><a>{{ .Username }}</a></b>
+</div>
+</div>
+ {{ end }}
+</div>
 </div>
 <script src="public/JS/main.js"></script>
 </body>
