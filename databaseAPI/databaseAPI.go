@@ -14,6 +14,7 @@ type Post struct {
 	UpVotes    int
 	DownVotes  int
 	Comments   []Comment
+	Images     []string
 }
 
 type Comment struct {

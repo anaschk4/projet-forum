@@ -2,22 +2,33 @@ package databaseAPI
 
 import (
     "database/sql"
+    "fmt"
     _ "github.com/mattn/go-sqlite3"
     "strconv"
     "strings"
     "time"
 )
 
-// GetPost by id returns a Post struct with the post data
 func GetPost(database *sql.DB, id string) Post {
-    rows, _ := database.Query("SELECT username, title, categories, content, created_at, upvotes, downvotes FROM posts WHERE id = ?", id)
+    rows, _ := database.Query("SELECT username, title, categories, content, created_at, upvotes, downvotes, images FROM posts WHERE id = ?", id)
     var post Post
     post.Id, _ = strconv.Atoi(id)
     for rows.Next() {
         catString := ""
-        rows.Scan(&post.Username, &post.Title, &catString, &post.Content, &post.CreatedAt, &post.UpVotes, &post.DownVotes)
-        categoriesArray := strings.Split(catString, ",")
-        post.Categories = categoriesArray
+        imagesString := ""
+        rows.Scan(&post.Username, &post.Title, &catString, &post.Content, &post.CreatedAt, &post.UpVotes, &post.DownVotes, &imagesString)
+        
+        // Traitement des catégories
+        if catString != "" {
+            post.Categories = strings.Split(catString, ",")
+        }
+        
+        // Traitement des images
+        if imagesString != "" {
+            post.Images = strings.Split(imagesString, ",")
+        } else {
+            post.Images = []string{}
+        }
     }
     return post
 }
@@ -121,10 +132,32 @@ func GetCategoryIcon(database *sql.DB, category string) string {
 }
 
 // CreatePost creates a new post
-func CreatePost(database *sql.DB, username string, title string, categories string, content string, createdAt time.Time) {
+func CreatePost(database *sql.DB, username string, title string, categories string, content string, createdAt time.Time, images []string) int64 {
     createdAtString := createdAt.Format("2006-01-02 15:04:05")
-    statement, _ := database.Prepare("INSERT INTO posts (username, title, categories, content, created_at, upvotes, downvotes) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    statement.Exec(username, title, categories, content, createdAtString, 0, 0)
+    
+    // Convertir le tableau d'images en chaîne de caractères séparée par des virgules
+    imagesStr := strings.Join(images, ",")
+    
+    statement, err := database.Prepare("INSERT INTO posts (username, title, categories, content, created_at, upvotes, downvotes, images) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    if err != nil {
+        fmt.Println("Erreur de préparation de requête:", err)
+        return 0
+    }
+    
+    result, err := statement.Exec(username, title, categories, content, createdAtString, 0, 0, imagesStr)
+    if err != nil {
+        fmt.Println("Erreur d'exécution de requête:", err)
+        return 0
+    }
+    
+    // Récupérer l'ID du post inséré
+    postId, err := result.LastInsertId()
+    if err != nil {
+        fmt.Println("Erreur lors de la récupération de l'ID:", err)
+        return 0
+    }
+    
+    return postId
 }
 
 // AddComment adds a comment to a post
@@ -132,6 +165,19 @@ func AddComment(database *sql.DB, username string, postId int, content string, c
     createdAtString := createdAt.Format("2006-01-02 15:04:05")
     statement, _ := database.Prepare("INSERT INTO comments (username, post_id, content, created_at) VALUES (?, ?, ?, ?)")
     statement.Exec(username, postId, content, createdAtString)
+}
+
+// EditPost édite un post dans la base de données
+func EditPost(database *sql.DB, postId int, title string, categories string, content string) bool {
+    statement, err := database.Prepare("UPDATE posts SET title = ?, categories = ?, content = ? WHERE id = ?")
+    if err != nil {
+        return false
+    }
+    _, err = statement.Exec(title, categories, content, postId)
+    if err != nil {
+        return false
+    }
+    return true
 }
 
 // DeletePost supprime un post et ses commentaires associés
@@ -169,10 +215,46 @@ func DeletePost(database *sql.DB, postId int) bool {
     return true
 }
 
+// EditComment édite un commentaire
+func EditComment(database *sql.DB, commentId int, content string) bool {
+    statement, err := database.Prepare("UPDATE comments SET content = ? WHERE id = ?")
+    if err != nil {
+        return false
+    }
+    _, err = statement.Exec(content, commentId)
+    if err != nil {
+        return false
+    }
+    return true
+}
+
+// DeleteComment supprime un commentaire
+func DeleteComment(database *sql.DB, commentId int) bool {
+    statement, err := database.Prepare("DELETE FROM comments WHERE id = ?")
+    if err != nil {
+        return false
+    }
+    _, err = statement.Exec(commentId)
+    if err != nil {
+        return false
+    }
+    return true
+}
+
 // IsPostOwner vérifie si l'utilisateur est le propriétaire du post
 func IsPostOwner(database *sql.DB, username string, postId int) bool {
     var count int
     err := database.QueryRow("SELECT COUNT(*) FROM posts WHERE id = ? AND username = ?", postId, username).Scan(&count)
+    if err != nil {
+        return false
+    }
+    return count > 0
+}
+
+// IsCommentOwner vérifie si l'utilisateur est le propriétaire du commentaire
+func IsCommentOwner(database *sql.DB, username string, commentId int) bool {
+    var count int
+    err := database.QueryRow("SELECT COUNT(*) FROM comments WHERE id = ? AND username = ?", commentId, username).Scan(&count)
     if err != nil {
         return false
     }

@@ -6,7 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <title>Créer une publication - Sekkay</title>
-    <link rel="stylesheet" href="public/CSS/createThread.css">
+    <link rel="stylesheet" href="public/CSS/orangeblacktheme.css">
 </head>
 <body>
     <header>
@@ -23,7 +23,7 @@
     </header>
 
     <div class="create-post-container">
-        <form class="post-form" action="/api/createpost" method="post">
+        <form class="post-form" action="/api/createpost" method="post" enctype="multipart/form-data">
             <h1>CRÉER UNE PUBLICATION</h1>
             <p>Partagez vos pensées avec la communauté Sekkay</p>
 
@@ -50,13 +50,19 @@
                 ></textarea>
             </div>
 
+            <div class="form-group">
+                <label>Ajouter des images (max 5)</label>
+                <input 
+                    type="file" 
+                    name="images" 
+                    accept="image/*" 
+                    multiple
+                >
+            </div>
+
             <div class="categories-section">
                 <h2>Sélectionnez des catégories</h2>
                 <div class="categories-grid">
-                    <label class="category-tag">
-                        <input type="checkbox" name="categories[]" value="salut">
-                        <span>Général</span>
-                    </label>
                     <label class="category-tag">
                         <input type="checkbox" name="categories[]" value="Technology">
                         <span>Technologie</span>

@@ -35,6 +35,7 @@ func CreateCategoriesTable(database *sql.DB) {
 	statement.Exec()
 }
 
+
 // CreateCategories creates categories in the database
 func CreateCategories(database *sql.DB) {
 	statement, _ := database.Prepare("INSERT INTO categories (name) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = ?)")

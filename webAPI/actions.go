@@ -3,7 +3,10 @@ package webAPI
 import (
 	"FORUM-GO/databaseAPI"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -21,9 +24,9 @@ func CreatePostApi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse les formulaires
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, fmt.Sprintf("Erreur de ParseForm(): %v", err), http.StatusBadRequest)
+	// Parse les formulaires multipart
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
+		http.Error(w, fmt.Sprintf("Erreur de ParseMultipartForm(): %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -57,9 +60,53 @@ func CreatePostApi(w http.ResponseWriter, r *http.Request) {
 	// Joindre les catégories en une seule chaîne
 	stringCategories := strings.Join(categories, ",")
 
+	// Créer le dossier pour les uploads
+	uploadDir := "public/uploads/posts"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		http.Error(w, "Erreur de création du dossier", http.StatusInternalServerError)
+		return
+	}
+
+	// Gérer les images téléchargées
+	var imagePaths []string
+	if multipartFiles := r.MultipartForm.File["images"]; len(multipartFiles) > 0 {
+		for _, fileHeader := range multipartFiles {
+			// Limiter à 5 images
+			if len(imagePaths) >= 5 {
+				break
+			}
+
+			// Ouvrir le fichier
+			file, err := fileHeader.Open()
+			if err != nil {
+				continue
+			}
+			defer file.Close()
+
+			// Nom de fichier unique
+			filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), fileHeader.Filename)
+			filepath := filepath.Join(uploadDir, filename)
+
+			// Créer le fichier de destination
+			dst, err := os.Create(filepath)
+			if err != nil {
+				continue
+			}
+			defer dst.Close()
+
+			// Copier le contenu
+			if _, err = io.Copy(dst, file); err != nil {
+				continue
+			}
+
+			// Ajouter le chemin relatif
+			imagePaths = append(imagePaths, "uploads/posts/"+filename)
+		}
+	}
+
 	// Créer le post
 	now := time.Now()
-	databaseAPI.CreatePost(database, username, title, stringCategories, content, now)
+	databaseAPI.CreatePost(database, username, title, stringCategories, content, now, imagePaths)
 	fmt.Printf("Post créé par %s avec le titre %s à %s\n", username, title, now.Format("2006-01-02 15:04:05"))
 
 	// Redirige vers la page des posts de l'utilisateur
@@ -115,7 +162,6 @@ func CommentsApi(w http.ResponseWriter, r *http.Request) {
 }
 
 // VoteApi permet de voter sur un post
-// VoteApi gère les votes sur les posts
 func VoteApi(w http.ResponseWriter, r *http.Request) {
     if r.Method != "POST" {
         http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
@@ -192,6 +238,232 @@ func VoteApi(w http.ResponseWriter, r *http.Request) {
     }
 
     http.Redirect(w, r, "/post?id="+strconv.Itoa(postIdInt), http.StatusFound)
+}
+
+// EditPostHandler gère l'édition d'un post
+func EditPostHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Vérifier si l'utilisateur est connecté
+    if !isLoggedIn(r) {
+        http.Redirect(w, r, "/login", http.StatusFound)
+        return
+    }
+
+    // Analyser le formulaire
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, fmt.Sprintf("Erreur de ParseForm(): %v", err), http.StatusBadRequest)
+        return
+    }
+
+    // Récupérer le cookie de session
+    cookie, err := r.Cookie("SESSION")
+    if err != nil {
+        http.Error(w, "Erreur de cookie SESSION", http.StatusUnauthorized)
+        return
+    }
+
+    // Récupérer les données du formulaire
+    username := databaseAPI.GetUser(database, cookie.Value)
+    postIdStr := r.FormValue("postId")
+    title := r.FormValue("title")
+    content := r.FormValue("content")
+    categories := r.Form["categories[]"]
+
+    // Convertir postId en entier
+    postId, err := strconv.Atoi(postIdStr)
+    if err != nil {
+        http.Error(w, "ID de post invalide", http.StatusBadRequest)
+        return
+    }
+
+    // Vérifier si l'utilisateur est le propriétaire du post
+    if !databaseAPI.IsPostOwner(database, username, postId) {
+        http.Error(w, "Non autorisé - Vous n'êtes pas le propriétaire de ce post", http.StatusUnauthorized)
+        return
+    }
+
+    // Joindre les catégories
+    stringCategories := strings.Join(categories, ",")
+
+    // Mettre à jour le post
+    success := databaseAPI.EditPost(database, postId, title, stringCategories, content)
+    if !success {
+        http.Error(w, "Erreur lors de la mise à jour du post", http.StatusInternalServerError)
+        return
+    }
+
+    // Rediriger vers le post mis à jour
+    http.Redirect(w, r, "/post?id="+postIdStr, http.StatusFound)
+}
+
+// DeletePostHandler gère la suppression d'un post
+func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Vérifier si l'utilisateur est connecté
+    if !isLoggedIn(r) {
+        http.Redirect(w, r, "/login", http.StatusFound)
+        return
+    }
+
+    // Analyser le formulaire
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, fmt.Sprintf("Erreur de ParseForm(): %v", err), http.StatusBadRequest)
+        return
+    }
+
+    // Récupérer le cookie de session
+    cookie, err := r.Cookie("SESSION")
+    if err != nil {
+        http.Error(w, "Erreur de cookie SESSION", http.StatusUnauthorized)
+        return
+    }
+
+    // Récupérer les données du formulaire
+    username := databaseAPI.GetUser(database, cookie.Value)
+    postIdStr := r.FormValue("postId")
+
+    // Convertir postId en entier
+    postId, err := strconv.Atoi(postIdStr)
+    if err != nil {
+        http.Error(w, "ID de post invalide", http.StatusBadRequest)
+        return
+    }
+
+    // Vérifier si l'utilisateur est le propriétaire du post
+    if !databaseAPI.IsPostOwner(database, username, postId) {
+        http.Error(w, "Non autorisé - Vous n'êtes pas le propriétaire de ce post", http.StatusUnauthorized)
+        return
+    }
+
+    // Supprimer le post
+    success := databaseAPI.DeletePost(database, postId)
+    if !success {
+        http.Error(w, "Erreur lors de la suppression du post", http.StatusInternalServerError)
+        return
+    }
+
+    // Rediriger vers la page d'accueil
+    http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// EditCommentHandler gère l'édition d'un commentaire
+func EditCommentHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Vérifier si l'utilisateur est connecté
+    if !isLoggedIn(r) {
+        http.Redirect(w, r, "/login", http.StatusFound)
+        return
+    }
+
+    // Analyser le formulaire
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, fmt.Sprintf("Erreur de ParseForm(): %v", err), http.StatusBadRequest)
+        return
+    }
+
+    // Récupérer le cookie de session
+    cookie, err := r.Cookie("SESSION")
+    if err != nil {
+        http.Error(w, "Erreur de cookie SESSION", http.StatusUnauthorized)
+        return
+    }
+
+    // Récupérer les données du formulaire
+    username := databaseAPI.GetUser(database, cookie.Value)
+    commentIdStr := r.FormValue("commentId")
+    postIdStr := r.FormValue("postId")
+    content := r.FormValue("content")
+
+    // Convertir commentId en entier
+    commentId, err := strconv.Atoi(commentIdStr)
+    if err != nil {
+        http.Error(w, "ID de commentaire invalide", http.StatusBadRequest)
+        return
+    }
+
+    // Vérifier si l'utilisateur est le propriétaire du commentaire
+    if !databaseAPI.IsCommentOwner(database, username, commentId) {
+        http.Error(w, "Non autorisé - Vous n'êtes pas le propriétaire de ce commentaire", http.StatusUnauthorized)
+        return
+    }
+
+    // Mettre à jour le commentaire
+    success := databaseAPI.EditComment(database, commentId, content)
+    if !success {
+        http.Error(w, "Erreur lors de la mise à jour du commentaire", http.StatusInternalServerError)
+        return
+    }
+
+    // Rediriger vers le post
+    http.Redirect(w, r, "/post?id="+postIdStr, http.StatusFound)
+}
+
+// DeleteCommentHandler gère la suppression d'un commentaire
+func DeleteCommentHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Vérifier si l'utilisateur est connecté
+    if !isLoggedIn(r) {
+        http.Redirect(w, r, "/login", http.StatusFound)
+        return
+    }
+
+    // Analyser le formulaire
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, fmt.Sprintf("Erreur de ParseForm(): %v", err), http.StatusBadRequest)
+        return
+    }
+
+    // Récupérer le cookie de session
+    cookie, err := r.Cookie("SESSION")
+    if err != nil {
+        http.Error(w, "Erreur de cookie SESSION", http.StatusUnauthorized)
+        return
+    }
+
+    // Récupérer les données du formulaire
+    username := databaseAPI.GetUser(database, cookie.Value)
+    commentIdStr := r.FormValue("commentId")
+    postIdStr := r.FormValue("postId")
+
+    // Convertir commentId en entier
+    commentId, err := strconv.Atoi(commentIdStr)
+    if err != nil {
+        http.Error(w, "ID de commentaire invalide", http.StatusBadRequest)
+        return
+    }
+
+    // Vérifier si l'utilisateur est le propriétaire du commentaire
+    if !databaseAPI.IsCommentOwner(database, username, commentId) {
+        http.Error(w, "Non autorisé - Vous n'êtes pas le propriétaire de ce commentaire", http.StatusUnauthorized)
+        return
+    }
+
+    // Supprimer le commentaire
+    success := databaseAPI.DeleteComment(database, commentId)
+    if !success {
+        http.Error(w, "Erreur lors de la suppression du commentaire", http.StatusInternalServerError)
+        return
+    }
+
+    // Rediriger vers le post
+    http.Redirect(w, r, "/post?id="+postIdStr, http.StatusFound)
+    
 }
 
 
