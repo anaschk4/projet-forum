@@ -14,7 +14,6 @@ type Post struct {
 	UpVotes    int
 	DownVotes  int
 	Comments   []Comment
-	Images     []string
 }
 
 type Comment struct {
@@ -23,4 +22,10 @@ type Comment struct {
 	Username  string
 	Content   string
 	CreatedAt string
+	Likes     int       
+    UserLiked bool 
+	Dislikes     int       // Nouveau champ
+    UserDisliked bool
+
+	
 }
