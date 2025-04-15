@@ -49,6 +49,7 @@ func main() {
 	database, _ = sql.Open("sqlite3", "./database.db")
 
 	databaseAPI.CreateUsersTable(database)
+	databaseAPI.AddProfileImageColumnIfNotExists(database)
 	databaseAPI.CreatePostTable(database)
 	databaseAPI.CreateCommentTable(database)
 	databaseAPI.CreateVoteTable(database)
@@ -57,10 +58,9 @@ func main() {
 	databaseAPI.CreateCategoriesIcons(database)
 	databaseAPI.CreateCommentLikesTable(database)
 	databaseAPI.CreateCommentDislikesTable(database)
-	databaseAPI.CreatePostImagesTable(database)
 	
-	// Créer le dossier pour stocker les images des posts
-	os.MkdirAll("public/uploads/posts", os.ModePerm)
+	// Créer le dossier pour stocker les images des profils
+	os.MkdirAll("public/uploads/profiles", os.ModePerm)
 
 	webAPI.SetDatabase(database)
 
