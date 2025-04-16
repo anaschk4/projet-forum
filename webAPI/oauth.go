@@ -19,8 +19,8 @@ import (
 
 // Configuration pour Google OAuth
 var googleOauthConfig = &oauth2.Config{
-	ClientID:     "",
-	ClientSecret: "",
+	ClientID:     "786149339952-g4vqhj3rficg4a0379i46pehddgut82l.apps.googleusercontent.com",
+	ClientSecret: "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",
 	RedirectURL:  "https://localhost:3030/auth/google/callback",
 	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
 	Endpoint:     google.Endpoint,
